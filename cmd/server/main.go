@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"reload/internal/reload"
-	_ "reload/internal/runner"
 	"runtime"
 )
 
@@ -22,7 +21,8 @@ func main() {
 	}
 	exitChan := make(chan struct{})
 	r := reload.NewReload(cwd, exitChan)
-	 r.ReadFiles()
+	r.ReadFiles()
+	//
 	// run := runner.NewRunner(make(chan string), []string{"go", "run", "test.go"})
 	// out, err := run.Start()
 	// if err != nil {
