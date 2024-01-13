@@ -2,16 +2,36 @@ package main
 
 import (
 	"fmt"
-	"reload/pkg/stack"
+	"os"
+	"reload/internal/reload"
+	_ "reload/internal/runner"
+	"runtime"
 )
 
 func main() {
-	st := stack.NewStack()
-	for i := 0; i < 20; i++ {
-		st.Push(i)
+	// Check for runtime
+	if runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
+		fmt.Println("Application only works in unix like systems")
+		return
 	}
-	st.Print()
-	val, _ := st.Pop()
-	fmt.Println(val)
-	st.Print()
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Error reading cwd ", err)
+		os.Exit(1)
+	}
+	exitChan := make(chan struct{})
+	r := reload.NewReload(cwd, exitChan)
+	 r.ReadFiles()
+	// run := runner.NewRunner(make(chan string), []string{"go", "run", "test.go"})
+	// out, err := run.Start()
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	return
+	// }
+	// defer run.Cleanup()
+	// for {
+	// 	val := <-out
+	// 	fmt.Println(val)
+	// }
 }
