@@ -19,9 +19,11 @@ To install Reload, you can use `go get`:
 \```bash
 go get -u github.com/hhacker1999/reload
 \```
+
 \```bash
 go build -o reload cmd/server/main.go
 \```
+
 \```bash
 sudo mv reload /usr/local/bin/ 
 \```
