@@ -26,22 +26,24 @@ type Reload struct {
 	currentlyInDebounce  bool
 	currentRunner        *runner.Runner
 	currentProcessOutput chan string
+	mainPath             string
 }
 
-func NewReload(root string, exitChan chan struct{}) Reload {
+func NewReload(root string, mainPath string, exitChan chan struct{}) Reload {
 	fmt.Println(BANNER)
 	return Reload{
 		root:       root,
 		changeChan: make(chan string),
 		blackList:  []string{".git", ".reload"},
 		exitChan:   exitChan,
+		mainPath:   mainPath,
 	}
 }
 
 func (r *Reload) createBinary() error {
 	run := runner.NewRunner(
 		make(chan string),
-		[]string{"go", "build", "-o", "main", r.root + "/" + "test.go"},
+		[]string{"go", "build", "-o", "main", r.root + "/" + r.mainPath},
 	)
 	oChan, err := run.Start()
 	if err != nil {
@@ -83,9 +85,9 @@ func (r *Reload) moveBinary() error {
 }
 
 func (r *Reload) startBinary() {
-  fmt.Println("Inside start binary")
+	fmt.Println("Inside start binary")
 	run := runner.NewRunner(make(chan string), []string{".reload/main"})
-  fmt.Println("New runner created")
+	fmt.Println("New runner created")
 	r.currentRunner = &run
 	oChan, err := r.currentRunner.Start()
 	if err != nil {
