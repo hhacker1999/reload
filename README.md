@@ -19,21 +19,17 @@ To install Reload, you can use `go get`:
 
 ```bash
 go get -u github.com/hhacker1999/reload
-```
 
-```bash
 go build -o reload cmd/server/main.go
-```
 
-```bash
 sudo mv reload /usr/local/bin/ 
 ```
 
 ### Usage
 To use Reload, navigate to your project directory and run:
-\```bash
+```bash
 reload -p path/to/main.go
-\```
+```
 Where `path/to/main.go` is the path to the main file of your Go application.
 
 Reload will now monitor for file changes in your project directory and its subdirectories. When a change is detected, Reload will automatically rebuild and restart your application.
