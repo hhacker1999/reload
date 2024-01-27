@@ -53,6 +53,7 @@ func (r *Runner) Start() (chan string, error) {
 	fmt.Println("Executing ", r.cmd)
 	exc := exec.CommandContext(context.Background(), r.cmd[0], r.cmd[1:]...)
 	exc.Stdout = r.currentWriter
+	exc.Stderr = r.currentWriter
 	r.exc = exc
 	iChan, err := r.exc.StdinPipe()
 	if err != nil {
