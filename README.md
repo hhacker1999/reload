@@ -16,17 +16,18 @@ Reload is a dynamic tool designed to enhance the development workflow for Go app
 
 ### Installation
 To install Reload, you can use `go get`:
-\```bash
+
+```bash
 go get -u github.com/hhacker1999/reload
-\```
+```
 
-\```bash
+```bash
 go build -o reload cmd/server/main.go
-\```
+```
 
-\```bash
+```bash
 sudo mv reload /usr/local/bin/ 
-\```
+```
 
 ### Usage
 To use Reload, navigate to your project directory and run:
