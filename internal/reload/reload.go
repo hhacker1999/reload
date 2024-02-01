@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"reload/internal/runner"
+	"sync"
 	"time"
 )
 
@@ -20,23 +21,30 @@ type Reload struct {
 	blackList            []string
 	root                 string
 	files                []string
-	reloadFiles          []ReloadFileConfig
+	reloadFiles          map[string]ReloadFileConfig
 	exitChan             chan struct{}
 	debounceStartTime    *time.Time
 	currentlyInDebounce  bool
 	currentRunner        *runner.Runner
 	currentProcessOutput chan string
 	mainPath             string
+	indexingMutex        *sync.Mutex
+	rebootingMutex       *sync.Mutex
+	isIndexing           bool
+	isRebooting          bool
 }
 
 func NewReload(root string, mainPath string, exitChan chan struct{}) Reload {
 	fmt.Println(BANNER)
 	return Reload{
-		root:       root,
-		changeChan: make(chan string),
-		blackList:  []string{".git", ".reload"},
-		exitChan:   exitChan,
-		mainPath:   mainPath,
+		reloadFiles:    make(map[string]ReloadFileConfig),
+		root:           root,
+		changeChan:     make(chan string),
+		blackList:      []string{".git", ".reload", "migrate.log"},
+		exitChan:       exitChan,
+		mainPath:       mainPath,
+		indexingMutex:  &sync.Mutex{},
+		rebootingMutex: &sync.Mutex{},
 	}
 }
 
@@ -110,12 +118,32 @@ func (r *Reload) printBinaryOutput() {
 	}
 }
 
-func (r *Reload) ReadFiles() error {
+func (r *Reload) indexFiles() error {
+	// NOTE: This setup is done because read files can be called multiple times when we decide
+	// to do indexing again
+	fmt.Println("--------------------------------------------------")
+	fmt.Println(len(r.reloadFiles))
+	fmt.Println("--------------------------------------------------")
+	if r.isIndexing {
+		fmt.Println("Indexing is already in process")
+		return nil
+	}
+
+	r.indexingMutex.Lock()
+	r.isIndexing = true
+	defer r.indexingMutex.Unlock()
+
+	for _, v := range r.reloadFiles {
+		v.cancel()
+	}
+	r.reloadFiles = make(map[string]ReloadFileConfig)
+
 	r.initialise()
 
 	err := r.readFileNonRec()
 	if err != nil {
 		fmt.Println("Error occured ", err)
+		r.isIndexing = false
 		return err
 	}
 	for _, v := range r.files {
@@ -125,11 +153,22 @@ func (r *Reload) ReadFiles() error {
 		}
 		ctx, cancel := context.WithCancel(context.Background())
 		temp.StartListening(ctx)
-		r.reloadFiles = append(r.reloadFiles, ReloadFileConfig{
+		reloadFileConfig := ReloadFileConfig{
 			file:   &temp,
 			ctx:    ctx,
 			cancel: cancel,
-		})
+		}
+		r.reloadFiles[v] = reloadFileConfig
+	}
+
+	r.isIndexing = false
+	return nil
+}
+
+func (r *Reload) ReadFiles() error {
+	err := r.indexFiles()
+	if err != nil {
+		return err
 	}
 
 	err = r.createBinary()
@@ -174,19 +213,29 @@ func (r *Reload) runnerRebooter() {
 		return
 	}
 
+	if r.isRebooting {
+		fmt.Println("Rebooting is already in process")
+		return
+	}
+	r.rebootingMutex.Lock()
+	r.isRebooting = true
+	defer r.rebootingMutex.Unlock()
+
 	// Waiting for debounce to be over
-	for time.Now().Sub(*r.debounceStartTime) <= time.Second*2 {
+	for time.Now().Sub(*r.debounceStartTime) <= time.Millisecond*800 {
 	}
 
 	r.debounceStartTime = nil
 	r.currentlyInDebounce = false
 	err := r.createBinary()
 	if err != nil {
+		r.isRebooting = false
 		return
 	}
 
 	err = r.moveBinary()
 	if err != nil {
+		r.isRebooting = false
 		return
 	}
 
@@ -196,6 +245,10 @@ func (r *Reload) runnerRebooter() {
 	}
 
 	r.startBinary()
+
+	go r.indexFiles()
+
+	r.isRebooting = false
 }
 
 type ReloadFile struct {
@@ -237,7 +290,7 @@ func (r *ReloadFile) StartListening(ctx context.Context) {
 					r.modTime = cTime
 					r.eventChan <- r.path
 				}
-				time.Sleep(time.Second * 2)
+				time.Sleep(time.Millisecond * 500)
 			}
 		}
 	}()

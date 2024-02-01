@@ -6,7 +6,6 @@ import (
 	"reload/pkg/stack"
 )
 
-
 func readFileRec(cwd string) ([]string, error) {
 	var result []string
 	entry, _ := os.ReadDir(cwd)
@@ -25,6 +24,7 @@ func readFileRec(cwd string) ([]string, error) {
 }
 
 func (r *Reload) readFileNonRec() error {
+	r.files = []string{}
 	dirStack := stack.NewStack()
 	pathStack := stack.NewPathStack()
 
