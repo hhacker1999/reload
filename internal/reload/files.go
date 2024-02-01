@@ -1,27 +1,12 @@
 package reload
 
 import (
+	"context"
+	"fmt"
 	"os"
 	"reload/pkg/arrs"
 	"reload/pkg/stack"
 )
-
-func readFileRec(cwd string) ([]string, error) {
-	var result []string
-	entry, _ := os.ReadDir(cwd)
-	for _, v := range entry {
-		if v.IsDir() {
-			if v.Name()[0] == '.' {
-				continue
-			}
-			foo, _ := readFileRec(cwd + "/" + v.Name())
-			result = append(result, foo...)
-		} else {
-			result = append(result, cwd+"/"+v.Name())
-		}
-	}
-	return result, nil
-}
 
 func (r *Reload) readFileNonRec() error {
 	r.files = []string{}
@@ -67,5 +52,49 @@ func (r *Reload) readFileNonRec() error {
 		}
 	}
 
+	return nil
+}
+
+func (r *Reload) indexFiles() error {
+	// NOTE: This setup is done because read files can be called multiple times when we decide
+	// to do indexing again
+	if r.isIndexing {
+		fmt.Println("Indexing is already in process")
+		return nil
+	}
+
+	r.indexingMutex.Lock()
+	r.isIndexing = true
+	defer r.indexingMutex.Unlock()
+
+	for _, v := range r.reloadFiles {
+		v.cancel()
+	}
+	r.reloadFiles = make(map[string]ReloadFileConfig)
+
+	r.initialise()
+
+	err := r.readFileNonRec()
+	if err != nil {
+		fmt.Println("Error occured ", err)
+		r.isIndexing = false
+		return err
+	}
+	for _, v := range r.files {
+		temp, err := NewReloadFile(v, r.changeChan)
+		if err != nil {
+			fmt.Println("Error occured ", err)
+		}
+		ctx, cancel := context.WithCancel(context.Background())
+		temp.StartListening(ctx)
+		reloadFileConfig := ReloadFileConfig{
+			file:   &temp,
+			ctx:    ctx,
+			cancel: cancel,
+		}
+		r.reloadFiles[v] = reloadFileConfig
+	}
+
+	r.isIndexing = false
 	return nil
 }
