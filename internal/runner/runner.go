@@ -8,8 +8,8 @@ import (
 	"sync"
 )
 
-const EXIT_SUCCESS = "EXIT SUCCESS"
-const EXIT_ERROR = "EXIT ERROR"
+const EXIT_SUCCESS = "EXIT SUCCESS\n"
+const EXIT_ERROR = "EXIT ERROR\n"
 
 type RunnerWriter struct {
 	oChan chan string
@@ -76,7 +76,7 @@ func (r *Runner) listenExit() {
 
 	defer r.wg.Done()
 	err := r.exc.Wait()
-	if err == nil {
+	if err == nil || err.Error() == "signal: killed" {
 		r.outputChan <- EXIT_SUCCESS
 	} else {
 		r.outputChan <- EXIT_ERROR
@@ -96,9 +96,7 @@ func (r *Runner) listenInput() {
 }
 
 func (r *Runner) Cleanup() {
-	fmt.Println("Inside cleanup")
 	r.exitChan <- struct{}{}
-	fmt.Println("After exit chan")
 	r.exc.Cancel()
 	r.wg.Wait()
 	close(r.inputChan)

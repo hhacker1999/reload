@@ -93,9 +93,7 @@ func (r *Reload) moveBinary() error {
 }
 
 func (r *Reload) startBinary() {
-	fmt.Println("Inside start binary")
 	run := runner.NewRunner(make(chan string), []string{".reload/main"})
-	fmt.Println("New runner created")
 	r.currentRunner = &run
 	oChan, err := r.currentRunner.Start()
 	if err != nil {
@@ -111,7 +109,6 @@ func (r *Reload) printBinaryOutput() {
 	for {
 		output, ok := <-r.currentProcessOutput
 		if !ok {
-			fmt.Println("Channel is closed")
 			return
 		}
 		fmt.Print(output)
@@ -121,9 +118,6 @@ func (r *Reload) printBinaryOutput() {
 func (r *Reload) indexFiles() error {
 	// NOTE: This setup is done because read files can be called multiple times when we decide
 	// to do indexing again
-	fmt.Println("--------------------------------------------------")
-	fmt.Println(len(r.reloadFiles))
-	fmt.Println("--------------------------------------------------")
 	if r.isIndexing {
 		fmt.Println("Indexing is already in process")
 		return nil
