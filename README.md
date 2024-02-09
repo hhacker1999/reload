@@ -15,10 +15,10 @@ Reload is a dynamic tool designed to enhance the development workflow for Go app
 - Go installed on your system (visit [Go's official website](https://golang.org/dl/) for installation instructions).
 
 ### Installation
-To install Reload, you can use `go get`:
+To install Reload, you can use clone this repository:
 
 ```bash
-go get -u github.com/hhacker1999/reload
+git clone https://github.com/hhacker1999/reload
 
 go build -o reload cmd/server/main.go
 
